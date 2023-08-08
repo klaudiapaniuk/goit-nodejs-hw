@@ -65,7 +65,9 @@ const updateContact = async (contactId, body) => {
 			return contact;
 		});
 
-		const updatedContact = updatedContacts.find(({ id }) => id === contactId);
+		const updatedContact = updatedContacts.find(
+			(contact) => (contact.id = contactId)
+		);
 
 		if (!updatedContact) {
 			return null;
