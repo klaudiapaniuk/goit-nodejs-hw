@@ -17,6 +17,10 @@ const contact = new Schema(
 			type: Boolean,
 			default: false,
 		},
+		owner: {
+			type: Schema.Types.ObjectId,
+			ref: "user",
+		},
 	},
 	{
 		versionKey: false,
@@ -26,8 +30,10 @@ const contact = new Schema(
 
 const Contact = mongoose.model("contact", contact, "contacts");
 
-const listContacts = async () => {
-	return Contact.find();
+const listContacts = async (pageOptions, query) => {
+	return Contact.find()
+		.skip(pageOptions.page * pageOptions.limit)
+		.limit(pageOptions.limit);
 };
 
 const getContactById = async (contactId) => {
