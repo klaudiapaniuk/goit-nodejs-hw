@@ -82,15 +82,40 @@ router.post("/login", async (req, res, next) => {
 
 router.get("/logout", auth, async (req, res, next) => {
 	const { _id } = req.user;
-	await User.findByIdAndUpdate(_id, { token: null });
-	res.status(204).json({});
+	const user = await User.findByIdAndUpdate(_id, { token: null });
+	if (!user) {
+		return res.status(401).json({
+			status: "Unauthorized",
+			code: 401,
+			message: "Not authorized",
+		});
+	}
+
+	res.status(204).json({
+		status: "No content",
+		code: 204,
+		message: "Logged out",
+	});
 });
 
-router.get("/current", auth, (req, res, next) => {
-	const { email, subscription } = req.user;
+router.get("/current", auth, async (req, res, next) => {
+	const { email, _id } = req.user;
+	const user = await User.findById(_id);
+	if (!user) {
+		return res.status(401).json({
+			status: "Unauthorized",
+			code: 401,
+			message: "Not authorized",
+		});
+	}
 	res.status(200).json({
-		email,
-		subscription,
+		status: "OK",
+		code: 200,
+		ResponseBody: {
+			email: email,
+			id: _id,
+			subscription: "starter",
+		},
 	});
 });
 
