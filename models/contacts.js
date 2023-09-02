@@ -30,10 +30,8 @@ const contact = new Schema(
 
 const Contact = mongoose.model("contact", contact, "contacts");
 
-const listContacts = async (pageOptions, query) => {
-	return Contact.find()
-		.skip(pageOptions.page * pageOptions.limit)
-		.limit(pageOptions.limit);
+const listContacts = async () => {
+	return Contact.find();
 };
 
 const getContactById = async (contactId) => {
