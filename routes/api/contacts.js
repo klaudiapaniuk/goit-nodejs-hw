@@ -19,6 +19,20 @@ const contactSchema = Joi.object({
 });
 
 router.get("/", async (req, res, next) => {
+	const { User } = require("../models/user");
+	const { _id } = req.user;
+	const user = await User.findById(_id);
+	const payload = {
+		id: user.id,
+		email: user.email,
+	};
+	if (!payload) {
+		return res.status(401).json({
+			status: "Unauthorized",
+			code: 401,
+			message: "Log in to get contacts",
+		});
+	}
 	try {
 		const contacts = await listContacts();
 		res.json({
