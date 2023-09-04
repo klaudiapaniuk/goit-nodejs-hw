@@ -18,7 +18,9 @@ const contactSchema = Joi.object({
 	favorite: Joi.boolean(),
 });
 
-router.get("/", async (req, res, next) => {
+const { auth } = require("../../middleware/auth");
+
+router.get("/", auth, async (req, res, next) => {
 	try {
 		const contacts = await listContacts();
 		res.json({
