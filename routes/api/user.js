@@ -7,12 +7,18 @@ const jwt = require("jsonwebtoken");
 const Joi = require("joi");
 const router = express.Router();
 const { auth } = require("../../middleware/auth");
+const gravatar = require("gravatar");
+const { upload } = require("../../middleware/upload");
+const path = require("path");
+const fs = require("fs/promises");
+const jimp = require("jimp");
 
 const userSchema = Joi.object({
 	password: Joi.string().required(),
 	email: Joi.string().required(),
 	subscription: Joi.string(),
 	token: Joi.string(),
+	avatarURL: Joi.string(),
 });
 
 router.post("/signup", async (req, res, next) => {
@@ -27,18 +33,21 @@ router.post("/signup", async (req, res, next) => {
 			message: "Email in use",
 		});
 	}
+	const avatarURL = gravatar.url(email);
 	try {
 		const hashPassword = await bcrypt.hash(password, 10);
 		const newUser = await User.create({
 			email,
 			subscription,
 			password: hashPassword,
+			avatarURL,
 		});
 		res.status(201).json({
 			message: "Registration successful",
 			user: {
 				email: newUser.email,
 				subscription: newUser.subscription,
+				avatarURL,
 			},
 		});
 	} catch (error) {
@@ -99,7 +108,7 @@ router.get("/logout", auth, async (req, res, next) => {
 });
 
 router.get("/current", auth, async (req, res, next) => {
-	const { email, _id } = req.user;
+	const { email, subscription, _id } = req.user;
 	const user = await User.findById(_id);
 	if (!user) {
 		return res.status(401).json({
@@ -114,7 +123,7 @@ router.get("/current", auth, async (req, res, next) => {
 		ResponseBody: {
 			email: email,
 			id: _id,
-			subscription: "starter",
+			subscription: subscription,
 		},
 	});
 });
@@ -133,5 +142,32 @@ router.patch("/:id", async (req, res, next) => {
 		next(error);
 	}
 });
+
+router.patch(
+	"/avatars",
+	auth,
+	upload.single("avatar"),
+	async (req, res, next) => {
+		const avatarsDir = path.join(process.cwd(), "public", "avatars");
+		const { path: temporaryName, originalname } = req.file;
+		const { id } = req.user;
+		const avatarName = `${id}_${originalname}`;
+		try {
+			const newAvatar = path.join(avatarsDir, avatarName);
+			await fs.rename(temporaryName, newAvatar);
+			const avatarURL = path.join("public", "avatars", avatarName);
+			jimp.read(avatarURL, (error, imageName) => {
+				if (error) throw error;
+				imageName.cover(250, 250).write(avatarURL);
+			});
+			await User.findByIdAndUpdate(id, { avatarURL }, { new: true });
+			res.status(200).json({
+				avatarURL,
+			});
+		} catch (error) {
+			next(error);
+		}
+	}
+);
 
 module.exports = router;

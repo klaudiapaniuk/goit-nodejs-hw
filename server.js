@@ -15,7 +15,7 @@ const connection = mongoose.connect(uriDb, {
 connection
 	.then(() => {
 		app.listen(PORT, () => {
-			console.log("Database connection successful");
+			console.log(`Database connection successful. Port ${PORT}`);
 		});
 	})
 	.catch((err) => {

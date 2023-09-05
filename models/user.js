@@ -20,6 +20,9 @@ const user = new Schema({
 		type: String,
 		default: null,
 	},
+	avatarURL: {
+		type: String,
+	},
 });
 
 const User = mongoose.model("user", user);
@@ -35,6 +38,7 @@ const login = async (user) => {
 const logout = async (id, token) => {
 	return User.findByIdAndUpdate(id, { token });
 };
+
 module.exports = {
 	User,
 	register,
