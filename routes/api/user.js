@@ -9,7 +9,6 @@ const router = express.Router();
 const { auth } = require("../../middleware/auth");
 const gravatar = require("gravatar");
 const { upload } = require("../../middleware/upload");
-const path = require("path");
 const fs = require("fs/promises");
 const jimp = require("jimp");
 
@@ -148,21 +147,24 @@ router.patch(
 	auth,
 	upload.single("avatar"),
 	async (req, res, next) => {
-		const avatarsDir = path.join(process.cwd(), "public", "avatars");
-		const { path: temporaryName, originalname } = req.file;
-		const { id } = req.user;
-		const avatarName = `${id}_${originalname}`;
+		const { user } = req;
+		const { path: temporaryName } = req.file;
 		try {
-			const newAvatar = path.join(avatarsDir, avatarName);
-			await fs.rename(temporaryName, newAvatar);
-			const avatarURL = path.join("public", "avatars", avatarName);
-			jimp.read(avatarURL, (error, imageName) => {
-				if (error) throw error;
-				imageName.cover(250, 250).write(avatarURL);
+			const image = await jimp.read(temporaryName);
+			image.cover(250, 250);
+			const newName = user._id;
+			await fs.rename(temporaryName, `public/avatars/${newName}.jpg`);
+			await User.findByIdAndUpdate(user._id, {
+				avatarURL: `/avatars/${newName}.jpg`,
 			});
-			await User.findByIdAndUpdate(id, { avatarURL }, { new: true });
 			res.status(200).json({
-				avatarURL,
+				message: "Avatar uploaded",
+				status: 200,
+				data: {
+					user: {
+						avatarURL: `/avatars/${newName}.jpg`,
+					},
+				},
 			});
 		} catch (error) {
 			next(error);
