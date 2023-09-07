@@ -142,7 +142,7 @@ router.patch("/:id", async (req, res, next) => {
 	}
 });
 
-router.patch(
+router.post(
 	"/avatars",
 	auth,
 	upload.single("avatar"),
