@@ -142,20 +142,20 @@ router.patch("/:id", async (req, res, next) => {
 	}
 });
 
-router.post(
+router.patch(
 	"/avatars",
 	auth,
 	upload.single("avatar"),
 	async (req, res, next) => {
 		const { _id } = req.user;
-		const { path: temporaryName } = req.file;
+		const { path: temporaryName, originalName } = req.file;
 		try {
 			const image = await jimp.read(temporaryName);
 			image.cover(250, 250);
-			const newName = _id;
+			const newName = originalName;
 			await fs.rename(temporaryName, `public/avatars/${newName}.jpg`);
 			await User.findByIdAndUpdate(_id, {
-				avatarURL: `/avatars/${newName}.jpg`,
+				avatarURL: `/avatars/${temporaryName}_${newName}.jpg`,
 			});
 			res.status(200).json({
 				message: "Avatar uploaded",
