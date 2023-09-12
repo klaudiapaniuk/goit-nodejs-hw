@@ -147,14 +147,14 @@ router.post(
 	auth,
 	upload.single("avatar"),
 	async (req, res, next) => {
-		const { user } = req;
+		const { _id } = req.user;
 		const { path: temporaryName } = req.file;
 		try {
 			const image = await jimp.read(temporaryName);
 			image.cover(250, 250);
-			const newName = user._id;
+			const newName = _id;
 			await fs.rename(temporaryName, `public/avatars/${newName}.jpg`);
-			await User.findByIdAndUpdate(user._id, {
+			await User.findByIdAndUpdate(_id, {
 				avatarURL: `/avatars/${newName}.jpg`,
 			});
 			res.status(200).json({
