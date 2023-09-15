@@ -11,6 +11,8 @@ const gravatar = require("gravatar");
 const { upload } = require("../../middleware/upload");
 const fs = require("fs/promises");
 const jimp = require("jimp");
+const { nanoid } = require("nanoid");
+const { verificationEmail } = require("../../service/email.send");
 
 const userSchema = Joi.object({
 	password: Joi.string().required(),
@@ -18,6 +20,7 @@ const userSchema = Joi.object({
 	subscription: Joi.string(),
 	token: Joi.string(),
 	avatarURL: Joi.string(),
+	verificationToken: Joi.string(),
 });
 
 router.post("/signup", async (req, res, next) => {
@@ -40,7 +43,9 @@ router.post("/signup", async (req, res, next) => {
 			subscription,
 			password: hashPassword,
 			avatarURL,
+			verificationToken: nanoid(),
 		});
+		verificationEmail(newUser.email, newUser.verificationToken);
 		res.status(201).json({
 			message: "Registration successful",
 			user: {
@@ -66,6 +71,11 @@ router.post("/login", async (req, res, next) => {
 	if (!user || !passwordCompare) {
 		return res.status(401).json({
 			message: "Email or password is wrong",
+		});
+	}
+	if (!user.verify) {
+		return res.status(401).json({
+			message: "Email not verifed",
 		});
 	}
 	try {
@@ -171,5 +181,56 @@ router.patch(
 		}
 	}
 );
+
+router.get("/verify/:verificationToken", async (req, res, next) => {
+	try {
+		const verificationToken = req.params;
+		const user = await User.findOneAndUpdate(verificationToken, {
+			verify: true,
+			verificationToken: null,
+		});
+		if (!user) {
+			return res.status(404).json({
+				code: 404,
+				message: "User not found",
+				user,
+			});
+		}
+		res.status(200).json({
+			code: 200,
+			message: "Verification successful",
+		});
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.post("/verify", async (req, res, next) => {
+	const validators = userSchema.validate(req.body);
+	const { email } = req.body;
+	if (validators.error?.message) {
+		return res.status(400).json({ message: validators.error.message });
+	}
+	try {
+		const user = await User.findOne({ email });
+		if (!user) {
+			return res.status(400).json({ message: "missing required field email" });
+		}
+		if (user.verify) {
+			return res
+				.status(400)
+				.json({ message: "Verification has already been passed" });
+		}
+		const newVerifyToken = user.verificationToken;
+		await verificationEmail(email, newVerifyToken);
+		res.status(200).json({
+			status: "success",
+			code: 200,
+			message: "Verification email sent",
+		});
+	} catch (error) {
+		next(error);
+	}
+});
 
 module.exports = router;
